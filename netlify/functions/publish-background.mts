@@ -1,3 +1,4 @@
+import { runFeeds } from "../../src/lib/feeds";
 import { runPublisher } from "../../src/lib/publisher";
 
 /**
@@ -9,6 +10,7 @@ export default async (req: Request) => {
   if (!process.env.CRON_SECRET || req.headers.get("x-cron-secret") !== process.env.CRON_SECRET) {
     return new Response("unauthorized", { status: 401 });
   }
-  const summary = await runPublisher({ deadlineMs: 13 * 60_000 });
-  console.log("publisher", JSON.stringify(summary));
+  const feeds = await runFeeds().catch((e) => ({ error: String(e) }));
+  const summary = await runPublisher({ deadlineMs: 12 * 60_000 });
+  console.log("feeds", JSON.stringify(feeds), "publisher", JSON.stringify(summary));
 };

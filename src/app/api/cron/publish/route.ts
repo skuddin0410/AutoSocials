@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { runFeeds } from "@/lib/feeds";
 import { runPublisher } from "@/lib/publisher";
 
 export const maxDuration = 300;
@@ -13,8 +14,9 @@ async function handle(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
   const given = request.headers.get("x-cron-secret") ?? request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   if (!secret || given !== secret) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const summary = await runPublisher({ deadlineMs: 240_000 });
-  return NextResponse.json(summary);
+  const feeds = await runFeeds().catch((e) => ({ error: String(e) }));
+  const summary = await runPublisher({ deadlineMs: 200_000 });
+  return NextResponse.json({ ...summary, feeds });
 }
 
 export const GET = handle;

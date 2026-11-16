@@ -47,6 +47,19 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               </select>
             </div>
           </div>
+          <div>
+            <label className="label" htmlFor="brand_voice">Brand voice for AI captions</label>
+            <textarea
+              id="brand_voice"
+              name="brand_voice"
+              rows={4}
+              className="input"
+              disabled={!admin}
+              defaultValue={workspace.brand_voice ?? ""}
+              placeholder="e.g. Canada's leading platform for small business insights. Professional, warm, practical. Canadian spelling. Tag @CanadianSME. Hashtags we use: #CanadianSME #SmallBusiness #CanadianBusiness"
+            />
+            <p className="hint mt-1.5">Leave blank to use the built-in CanadianSME voice.</p>
+          </div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="require_approval" defaultChecked={workspace.require_approval} disabled={!admin} />
             Posts by editors need admin approval before they go out

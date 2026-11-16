@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BrandLogo, ProductTag } from "@/components/Brand";
 import { BrandSwitcher } from "@/components/BrandSwitcher";
-import { IconCalendar, IconImage, IconLink, IconList, IconLogout, IconPlus, IconSettings } from "@/components/Icons";
+import { IconCalendar, IconClock, IconImage, IconLink, IconList, IconLogout, IconPlus, IconRss, IconSettings } from "@/components/Icons";
 import { NavLink } from "@/components/NavLink";
 import { getContext } from "@/lib/workspace";
 import { signOut } from "./actions";
@@ -28,6 +28,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <NavLink href="/calendar" icon={<IconCalendar />}>Calendar</NavLink>
           <NavLink href="/posts" icon={<IconList />}>Queue</NavLink>
           <NavLink href="/media" icon={<IconImage />}>Media library</NavLink>
+          <NavLink href="/sources" icon={<IconRss />}>Auto-post</NavLink>
+          <NavLink href="/times" icon={<IconClock />}>Posting times</NavLink>
           <NavLink href="/channels" icon={<IconLink />}>Channels</NavLink>
           <NavLink href="/settings" icon={<IconSettings />}>Settings</NavLink>
         </nav>

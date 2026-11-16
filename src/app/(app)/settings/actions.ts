@@ -20,6 +20,7 @@ export async function updateBrand(formData: FormData) {
       name: String(formData.get("name")).trim() || workspace.name,
       timezone: tz,
       require_approval: formData.get("require_approval") === "on",
+      brand_voice: String(formData.get("brand_voice") ?? "").trim() || null,
     })
     .eq("id", workspace.id);
   revalidatePath("/", "layout");

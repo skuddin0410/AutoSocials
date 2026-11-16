@@ -4,7 +4,7 @@ import { createClient } from "./supabase/server";
 
 export const WS_COOKIE = "as_ws";
 
-export type Workspace = { id: string; name: string; slug: string; timezone: string; require_approval: boolean };
+export type Workspace = { id: string; name: string; slug: string; timezone: string; require_approval: boolean; brand_voice: string | null };
 export type Role = "owner" | "admin" | "editor" | "viewer";
 
 /** Signed-in user + current brand (workspace). Redirects to /login or /onboarding when missing. */
@@ -17,7 +17,7 @@ export async function getContext() {
 
   const { data: memberships } = await supabase
     .from("workspace_members")
-    .select("role, workspaces(id,name,slug,timezone,require_approval)")
+    .select("role, workspaces(id,name,slug,timezone,require_approval,brand_voice)")
     .eq("user_id", user.id);
 
   const list = (memberships ?? [])
