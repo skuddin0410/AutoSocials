@@ -6,7 +6,7 @@ export function BrandLogo({ light = false, className = "h-9" }: { light?: boolea
     <img
       src={light ? "https://canadiansme.ca/assets/canadiansme-logo-light.webp" : "https://canadiansme.ca/assets/canadiansme-logo-520.webp"}
       alt="CanadianSME"
-      className={`w-auto ${className}`}
+      className={`w-auto max-w-full object-contain object-left ${className}`}
     />
   );
 }

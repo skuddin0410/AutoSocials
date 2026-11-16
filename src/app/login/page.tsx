@@ -49,7 +49,7 @@ function LoginForm() {
     <main className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
       {/* Brand panel */}
       <section className="relative hidden overflow-hidden bg-navy p-14 text-white lg:flex lg:flex-col">
-        <BrandLogo light className="h-12" />
+        <BrandLogo light className="h-10" />
         <div className="my-auto max-w-lg">
           <h1 className="text-[44px] leading-[1.08] font-bold">
             Every CanadianSME channel. One publish button.

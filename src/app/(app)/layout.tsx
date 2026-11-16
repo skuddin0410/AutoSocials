@@ -12,7 +12,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-screen">
       <aside className="sticky top-0 flex h-screen w-[272px] shrink-0 flex-col bg-navy px-4 py-6">
         <Link href="/calendar" className="mb-7 block px-2" aria-label="AutoSocials home">
-          <BrandLogo light className="h-10" />
+          <BrandLogo light className="h-8" />
           <div className="mt-2">
             <ProductTag dark />
           </div>
