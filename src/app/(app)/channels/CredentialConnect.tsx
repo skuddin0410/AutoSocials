@@ -9,7 +9,7 @@ export function CredentialConnect({ platform, disabled }: { platform: PlatformMe
 
   if (!open) {
     return (
-      <button className="btn-ghost w-full" disabled={disabled} onClick={() => setOpen(true)}>
+      <button className="btn-primary w-full" disabled={disabled} onClick={() => setOpen(true)}>
         Connect
       </button>
     );
@@ -29,7 +29,7 @@ export function CredentialConnect({ platform, disabled }: { platform: PlatformMe
             className="input"
             autoComplete="off"
           />
-          {f.help && <p className="mt-1 text-xs text-muted">{f.help}</p>}
+          {f.help && <p className="hint mt-1.5">{f.help}</p>}
         </div>
       ))}
       {state.error && <p className="text-sm text-red-700">{state.error}</p>}

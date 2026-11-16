@@ -52,27 +52,27 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="mx-auto max-w-5xl">
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <header className="masthead">
         <div>
-          <h1 className="text-2xl font-semibold">All posts</h1>
-          <p className="text-sm text-muted">Status of every post on every channel.</p>
+          <h1>All posts</h1>
+          <p>See what went out, what's coming up and what needs a second try.</p>
         </div>
-        <Link href="/compose" className="btn-primary">+ Create post</Link>
+        <Link href="/compose" className="btn-primary">Create post</Link>
       </header>
 
-      <nav className="mb-5 flex flex-wrap gap-1">
+      <nav className="mb-6 flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <Link
             key={f.key}
             href={`/posts?filter=${f.key}`}
-            className={`rounded-lg px-3 py-1.5 text-sm ${filter === f.key && !sp.post ? "bg-ink text-white" : "text-muted hover:bg-stone-100"}`}
+            className={`min-h-10 rounded-full px-4 py-2 font-display text-sm font-semibold ${filter === f.key && !sp.post ? "bg-navy text-white" : "bg-white text-muted ring-1 ring-line hover:text-ink"}`}
           >
             {f.label}
           </Link>
         ))}
       </nav>
 
-      {!groups.size && <div className="card p-10 text-center text-sm text-muted">Nothing here yet.</div>}
+      {!groups.size && <div className="card p-12 text-center"><p className="font-display text-lg font-semibold text-navy">No posts here</p><p className="hint mt-1">Create a post and it will show up in this list.</p><Link href="/compose" className="btn-primary mt-5">Create post</Link></div>}
 
       <div className="space-y-4">
         {Array.from(groups.entries()).map(([postId, vs]) => {
@@ -80,35 +80,35 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
           const needsApproval = vs.some((v) => v.status === "pending_approval");
           return (
             <article key={postId} className="card">
-              <div className="flex flex-wrap items-start gap-4 border-b border-line p-4">
+              <div className="flex flex-wrap items-start gap-4 border-b border-line p-5">
                 <div className="min-w-0 flex-1">
-                  <div className="mb-1 text-xs text-muted">
+                  <div className="mb-1.5 font-display text-sm font-semibold text-harbour">
                     {first.scheduled_at ? formatDateTime(first.scheduled_at, tz) : "Not scheduled"}
                   </div>
-                  <p className="line-clamp-3 whitespace-pre-line text-sm">{first.body || "(media only)"}</p>
+                  <p className="line-clamp-3 whitespace-pre-line text-[15px] leading-relaxed">{first.body || "(media only)"}</p>
                 </div>
                 {editor && (
                   <div className="flex gap-2">
                     {needsApproval && isAdmin(role) && (
                       <form action={approvePost}>
                         <input type="hidden" name="post_id" value={postId} />
-                        <button className="btn-primary py-1.5">Approve</button>
+                        <button className="btn-primary btn-sm">Approve</button>
                       </form>
                     )}
                     <form action={deletePost}>
                       <input type="hidden" name="post_id" value={postId} />
-                      <button className="btn-danger py-1.5">Delete</button>
+                      <button className="btn-danger btn-sm">Delete</button>
                     </form>
                   </div>
                 )}
               </div>
               <ul className="divide-y divide-line">
                 {vs.map((v) => (
-                  <li key={v.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
+                  <li key={v.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
                     {v.social_accounts && (
-                      <AccountAvatar platform={v.social_accounts.platform} name={v.social_accounts.display_name} avatar={v.social_accounts.avatar_url} size={28} />
+                      <AccountAvatar platform={v.social_accounts.platform} name={v.social_accounts.display_name} avatar={v.social_accounts.avatar_url} size={34} />
                     )}
-                    <span className="min-w-0 flex-1 truncate text-sm">{v.social_accounts?.display_name ?? "Removed channel"}</span>
+                    <span className="min-w-0 flex-1 truncate font-medium">{v.social_accounts?.display_name ?? "Removed channel"}</span>
                     {v.last_error && (
                       <span className="max-w-xs truncate text-xs text-red-700" title={v.last_error}>
                         {v.last_error}
@@ -116,18 +116,18 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
                     )}
                     <StatusPill status={v.status} />
                     {v.external_url && (
-                      <a href={v.external_url} target="_blank" className="text-xs underline">View</a>
+                      <a href={v.external_url} target="_blank" className="btn-ghost btn-sm">View post</a>
                     )}
                     {editor && ["failed", "cancelled", "draft"].includes(v.status) && (
                       <form action={retryVariant}>
                         <input type="hidden" name="id" value={v.id} />
-                        <button className="text-xs font-medium text-blue-700 hover:underline">{v.status === "failed" ? "Retry now" : "Publish now"}</button>
+                        <button className="btn-blue btn-sm">{v.status === "failed" ? "Retry now" : "Publish now"}</button>
                       </form>
                     )}
                     {editor && ["scheduled", "pending_approval", "draft", "failed"].includes(v.status) && (
                       <form action={cancelVariant}>
                         <input type="hidden" name="id" value={v.id} />
-                        <button className="text-xs text-muted hover:text-ink">Cancel</button>
+                        <button className="btn-ghost btn-sm">Cancel</button>
                       </form>
                     )}
                   </li>

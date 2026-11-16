@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { IconChevronLeft, IconChevronRight, IconPlus } from "@/components/Icons";
 import { PlatformBadge } from "@/components/PlatformBadge";
 import { STATUS_DOT } from "@/components/StatusPill";
 import type { PlatformId } from "@/lib/platforms/registry";
@@ -53,23 +54,23 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="mx-auto max-w-7xl">
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <header className="masthead">
         <div>
-          <h1 className="text-2xl font-semibold">{monthName}</h1>
-          <p className="text-sm text-muted">{workspace.name} · times in {tz}</p>
+          <h1>{monthName}</h1>
+          <p>{workspace.name} calendar. Times shown in {tz.replace("_", " ")}.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href={`/calendar?month=${prev}`} className="btn-ghost">←</Link>
+          <Link href={`/calendar?month=${prev}`} className="btn-ghost px-3" aria-label="Previous month"><IconChevronLeft /></Link>
           <Link href="/calendar" className="btn-ghost">Today</Link>
-          <Link href={`/calendar?month=${next}`} className="btn-ghost">→</Link>
-          <Link href="/compose" className="btn-primary">+ Create post</Link>
+          <Link href={`/calendar?month=${next}`} className="btn-ghost px-3" aria-label="Next month"><IconChevronRight /></Link>
+          <Link href="/compose" className="btn-primary"><IconPlus /> Create post</Link>
         </div>
       </header>
 
       <div className="card overflow-hidden">
-        <div className="grid grid-cols-7 border-b border-line bg-stone-50 text-xs font-medium uppercase tracking-wide text-muted">
+        <div className="grid grid-cols-7 border-b border-line bg-navy text-sm font-semibold text-white/85">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-            <div key={d} className="px-3 py-2">{d}</div>
+            <div key={d} className="px-3 py-3 font-display">{d}</div>
           ))}
         </div>
         <div className="grid grid-cols-7">
@@ -77,9 +78,9 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
             const key = d ? `${month}-${String(d).padStart(2, "0")}` : "";
             const posts = d ? byDay.get(key) : undefined;
             return (
-              <div key={i} className={`min-h-32 border-b border-r border-line p-2 ${d ? "" : "bg-stone-50/60"} ${(i + 1) % 7 === 0 ? "border-r-0" : ""}`}>
+              <div key={i} className={`min-h-36 border-b border-r border-line p-2 ${d ? "" : "bg-paper"} ${(i + 1) % 7 === 0 ? "border-r-0" : ""}`}>
                 {d && (
-                  <div className={`mb-1 text-xs ${key === todayKey ? "inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand font-semibold text-white" : "text-muted"}`}>
+                  <div className={`mb-1 text-xs ${key === todayKey ? "inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand font-display text-sm font-semibold text-white" : "font-display text-sm font-medium text-muted"}`}>
                     {d}
                   </div>
                 )}
@@ -92,7 +93,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                         <Link
                           key={v.post_id}
                           href={`/posts?post=${v.post_id}`}
-                          className="block rounded-md border border-line bg-white p-1.5 text-xs hover:border-ink/40"
+                          className="block rounded-lg border border-line bg-white p-2 text-[13px] shadow-sm hover:border-harbour"
                         >
                           <div className="mb-1 flex items-center gap-1">
                             <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[worst]}`} />

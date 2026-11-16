@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { WS_COOKIE } from "@/lib/workspace";
+import { BrandLogo } from "@/components/Brand";
 
 async function createBrand(formData: FormData) {
   "use server";
@@ -24,9 +25,10 @@ export default async function Onboarding() {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
-      <div className="card w-full max-w-md p-8">
-        <h1 className="text-xl font-semibold">Set up your first brand</h1>
-        <p className="mt-1 text-sm text-muted">
+      <div className="card w-full max-w-lg p-10">
+        <BrandLogo className="mb-8 h-10" />
+        <h1 className="text-[28px] font-bold text-navy">Set up your first brand</h1>
+        <p className="mt-2 text-muted">
           A brand holds its own social channels, calendar and team. Start with CanadianSME; add your other websites later from Settings.
         </p>
         <form action={createBrand} className="mt-6 space-y-4">
@@ -34,9 +36,9 @@ export default async function Onboarding() {
             <label className="label" htmlFor="name">Brand name</label>
             <input id="name" name="name" className="input" defaultValue="CanadianSME" required />
           </div>
-          <button className="btn-primary w-full">Create brand</button>
+          <button className="btn-primary btn-lg w-full">Create brand</button>
         </form>
-        <p className="mt-6 text-xs text-muted">
+        <p className="hint mt-6">
           Joining an existing brand instead? Ask its admin to add {user.email} under Settings → Team.
         </p>
       </div>
