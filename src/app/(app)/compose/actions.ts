@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { PLATFORM_BY_ID, textLength, type PlatformId } from "@/lib/platforms/registry";
 import { zonedLocalToUtcIso } from "@/lib/time";
 import { triggerPublisher } from "@/lib/trigger";
+import { aiEnabled, generateCaptions } from "@/lib/ai";
 import { canEdit, getContext, isAdmin } from "@/lib/workspace";
 
 export type ComposePayload = {
@@ -13,7 +14,7 @@ export type ComposePayload = {
   overrides: Partial<Record<PlatformId, string>>;
   title: string;
   options: Record<string, unknown>; // { tiktok_mode, privacy_level, youtube_privacy, boards: {accountId: boardId} }
-  mode: "now" | "schedule" | "draft";
+  mode: "now" | "schedule" | "draft" | "queue";
   scheduledLocal?: string; // "YYYY-MM-DDTHH:mm" in brand timezone
 };
 
@@ -78,6 +79,21 @@ export async function createPost(p: ComposePayload): Promise<ComposeResult> {
   if (postErr) return { ok: false, error: postErr.message };
 
   const boards = (p.options.boards as Record<string, string>) ?? {};
+  // "Add to queue": each channel gets its own next free posting time.
+  const slots: Record<string, string> = {};
+  if (p.mode === "queue") {
+    const missing: string[] = [];
+    for (const a of accounts) {
+      const { data: slot } = await supabase.rpc("next_free_slot", { p_account: a.id });
+      if (slot) slots[a.id] = slot as string;
+      else missing.push(PLATFORM_BY_ID[a.platform as PlatformId].name);
+    }
+    if (missing.length) {
+      await supabase.from("posts").delete().eq("id", post.id);
+      return { ok: false, error: `Set posting times first for: ${Array.from(new Set(missing)).join(", ")} (Posting times page).` };
+    }
+  }
+
   const rows = accounts.map((a) => {
     const platform = a.platform as PlatformId;
     const options: Record<string, unknown> = {};
@@ -97,7 +113,7 @@ export async function createPost(p: ComposePayload): Promise<ComposeResult> {
       media_ids: p.mediaIds,
       options,
       status,
-      scheduled_at: scheduledAt,
+      scheduled_at: p.mode === "queue" ? slots[a.id] : scheduledAt,
       approved_by: status === "scheduled" ? user.id : null,
     };
   });
@@ -110,5 +126,29 @@ export async function createPost(p: ComposePayload): Promise<ComposeResult> {
   if (p.mode === "now" && status === "scheduled") await triggerPublisher();
   revalidatePath("/calendar");
   revalidatePath("/posts");
-  return { ok: true, count: rows.length, when: scheduledAt };
+  return { ok: true, count: rows.length, when: p.mode === "queue" ? Object.values(slots).sort()[0] ?? null : scheduledAt };
+}
+
+export type AiResult = { ok: true; base: string; perPlatform: Partial<Record<PlatformId, string>> } | { ok: false; error: string };
+
+/** "Write with AI": drafts the main text plus a tailored version for each selected platform. */
+export async function aiWrite(input: { topic: string; text: string; link: string; platforms: PlatformId[] }): Promise<AiResult> {
+  const { workspace, role, supabase } = await getContext();
+  if (!canEdit(role)) return { ok: false, error: "Viewers can't use AI writing." };
+  if (!aiEnabled()) return { ok: false, error: "AI writing is off. Add ANTHROPIC_API_KEY in Netlify → Environment variables, then redeploy." };
+  if (!input.platforms.length) return { ok: false, error: "Pick at least one channel first." };
+  if (!input.topic.trim() && !input.text.trim() && !input.link.trim()) return { ok: false, error: "Type a topic, a rough draft or paste a link first." };
+  const { data: ws } = await supabase.from("workspaces").select("brand_voice").eq("id", workspace.id).single();
+  try {
+    const r = await generateCaptions({
+      brandVoice: ws?.brand_voice,
+      topic: input.topic || undefined,
+      sourceText: input.text || undefined,
+      link: input.link || null,
+      platforms: input.platforms,
+    });
+    return { ok: true, ...r };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
 }

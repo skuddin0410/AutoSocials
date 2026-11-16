@@ -243,3 +243,6 @@ export function isPlatformId(v: string): v is PlatformId {
 export function textLength(text: string): number {
   return Array.from(text).length;
 }
+
+/** Regions a channel can be tagged with (e.g. CanadianSME Canada vs. USA pages). */
+export const REGIONS = ["Canada", "USA", "Global", "UK", "Europe", "India"] as const;

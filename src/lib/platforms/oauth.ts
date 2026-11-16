@@ -21,7 +21,7 @@ const expiresAt = (seconds?: number) => (seconds ? new Date(Date.now() + seconds
 
 // ───────────────────────────── Authorization URLs ─────────────────────────────
 
-export function buildAuthUrl(platform: PlatformId, state: string, verifier: string): string {
+export function buildAuthUrl(platform: PlatformId, state: string, verifier: string, variant?: string | null): string {
   const redirect = redirectUri(platform);
   switch (platform) {
     case "facebook":
@@ -33,7 +33,7 @@ export function buildAuthUrl(platform: PlatformId, state: string, verifier: stri
         redirect_uri: redirect,
         state,
         response_type: "code",
-        scope: META_SCOPES[platform].join(","),
+        scope: (variant === "meta" ? Array.from(new Set([...META_SCOPES.facebook, ...META_SCOPES.instagram])) : META_SCOPES[platform]).join(","),
       }).toString();
       return u.toString();
     }
@@ -116,12 +116,12 @@ export function buildAuthUrl(platform: PlatformId, state: string, verifier: stri
 
 // ───────────────────────────── Callback: code → accounts ─────────────────────────────
 
-export async function handleCallback(platform: PlatformId, code: string, verifier: string): Promise<ConnectedAccount[]> {
+export async function handleCallback(platform: PlatformId, code: string, verifier: string, variant?: string | null): Promise<ConnectedAccount[]> {
   const redirect = redirectUri(platform);
   switch (platform) {
     case "facebook":
     case "instagram":
-      return metaCallback(platform, code, redirect);
+      return metaCallback(platform, code, redirect, variant === "meta");
 
     case "threads": {
       const [id, secret] = requireEnv("THREADS_APP_ID", "THREADS_APP_SECRET");
@@ -320,7 +320,7 @@ export async function handleCallback(platform: PlatformId, code: string, verifie
   }
 }
 
-async function metaCallback(platform: "facebook" | "instagram", code: string, redirect: string): Promise<ConnectedAccount[]> {
+async function metaCallback(platform: "facebook" | "instagram", code: string, redirect: string, both = false): Promise<ConnectedAccount[]> {
   const [appId, secret] = requireEnv("META_APP_ID", "META_APP_SECRET");
   const short = await api(
     `${GRAPH()}/oauth/access_token?${new URLSearchParams({ client_id: appId, client_secret: secret, redirect_uri: redirect, code })}`,
@@ -343,8 +343,9 @@ async function metaCallback(platform: "facebook" | "instagram", code: string, re
   );
   const out: ConnectedAccount[] = [];
   for (const p of pages.data ?? []) {
-    if (platform === "facebook") {
+    if (platform === "facebook" || both) {
       out.push({
+        platform: "facebook",
         external_id: p.id,
         account_type: "page",
         handle: p.username ?? null,
@@ -352,9 +353,11 @@ async function metaCallback(platform: "facebook" | "instagram", code: string, re
         avatar_url: p.picture?.data?.url ?? null,
         credential: { access_token: p.access_token },
       });
-    } else if (p.instagram_business_account) {
+    }
+    if ((platform === "instagram" || both) && p.instagram_business_account) {
       const ig = p.instagram_business_account;
       out.push({
+        platform: "instagram",
         external_id: ig.id,
         account_type: "business",
         handle: ig.username,

@@ -2,11 +2,15 @@ import { nowLocalInput } from "@/lib/time";
 import { getContext } from "@/lib/workspace";
 import { Composer } from "./Composer";
 
-export default async function ComposePage() {
+export default async function ComposePage({ searchParams }: { searchParams: Promise<{ media?: string }> }) {
   const { supabase, workspace } = await getContext();
+  const mediaIds = ((await searchParams).media ?? "").split(",").filter(Boolean).slice(0, 10);
+  const { data: initialMedia } = mediaIds.length
+    ? await supabase.from("media_assets").select("id,public_url,kind,storage_path").in("id", mediaIds)
+    : { data: [] as any[] };
   const { data } = await supabase
     .from("social_accounts")
-    .select("id,platform,display_name,handle,avatar_url,status,settings")
+    .select("id,platform,display_name,handle,avatar_url,status,settings,region")
     .eq("workspace_id", workspace.id)
     .order("platform");
 
@@ -23,6 +27,7 @@ export default async function ComposePage() {
         workspaceId={workspace.id}
         timezone={workspace.timezone}
         defaultLocal={nowLocalInput(workspace.timezone, 60)}
+        initialMedia={(initialMedia ?? []).map((m: any) => ({ id: m.id, public_url: m.public_url, kind: m.kind, name: m.storage_path }))}
       />
     </div>
   );

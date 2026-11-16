@@ -4,7 +4,7 @@ import { StatusPill } from "@/components/StatusPill";
 import type { PlatformId } from "@/lib/platforms/registry";
 import { formatDateTime } from "@/lib/time";
 import { canEdit, getContext, isAdmin } from "@/lib/workspace";
-import { approvePost, cancelVariant, deletePost, retryVariant } from "./actions";
+import { approvePost, cancelVariant, deletePost, publishDraftPostNow, queueDraftPost, retryVariant } from "./actions";
 
 type Variant = {
   id: string;
@@ -23,7 +23,7 @@ const FILTERS = [
   { key: "upcoming", label: "Upcoming" },
   { key: "pending_approval", label: "Needs approval" },
   { key: "failed", label: "Failed" },
-  { key: "published", label: "Published" },
+  { key: "published", label: "Sent" },
   { key: "draft", label: "Drafts" },
   { key: "all", label: "All" },
 ];
@@ -54,7 +54,7 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
     <div className="mx-auto max-w-5xl">
       <header className="masthead">
         <div>
-          <h1>All posts</h1>
+          <h1>Queue</h1>
           <p>See what went out, what's coming up and what needs a second try.</p>
         </div>
         <Link href="/compose" className="btn-primary">Create post</Link>
@@ -88,7 +88,19 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
                   <p className="line-clamp-3 whitespace-pre-line text-[15px] leading-relaxed">{first.body || "(media only)"}</p>
                 </div>
                 {editor && (
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    {vs.some((v) => v.status === "draft") && (
+                      <>
+                        <form action={queueDraftPost}>
+                          <input type="hidden" name="post_id" value={postId} />
+                          <button className="btn-blue btn-sm">Add to queue</button>
+                        </form>
+                        <form action={publishDraftPostNow}>
+                          <input type="hidden" name="post_id" value={postId} />
+                          <button className="btn-primary btn-sm">Publish now</button>
+                        </form>
+                      </>
+                    )}
                     {needsApproval && isAdmin(role) && (
                       <form action={approvePost}>
                         <input type="hidden" name="post_id" value={postId} />

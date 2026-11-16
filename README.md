@@ -102,11 +102,14 @@ Set `APP_URL=http://localhost:3000` locally and add the localhost callback URIs 
 curl -H "x-cron-secret: $CRON_SECRET" http://localhost:3000/api/cron/publish
 ```
 
+## AI captions (optional)
+
+Add `ANTHROPIC_API_KEY` (and optionally `ANTHROPIC_MODEL`, default `claude-sonnet-5-5`) in Netlify. This turns on **Write with AI** in the composer and AI captions for website auto-posts. The brand voice is set in Settings.
+
 ## Roadmap
 
-- Posting slots / "add to queue" (table `posting_slots` is ready)
-- AI caption rewrite per platform
 - Bulk CSV upload, evergreen recycling
-- Analytics sync
-- WordPress auto-posting (new article → draft posts)
+- Unified inbox (comments/messages)
+- Analytics sync and reports
+- Link-in-bio page
 - REST API + MCP server for agents

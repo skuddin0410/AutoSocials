@@ -3,20 +3,31 @@ import { useActionState, useState } from "react";
 import type { PlatformMeta } from "@/lib/platforms/registry";
 import { connectCredentials, type ActionState } from "./actions";
 
-export function CredentialConnect({ platform, disabled }: { platform: PlatformMeta; disabled?: boolean }) {
-  const [open, setOpen] = useState(false);
+export function CredentialConnect({
+  platform,
+  disabled,
+  region = "Canada",
+  startOpen = false,
+}: {
+  platform: PlatformMeta;
+  disabled?: boolean;
+  region?: string;
+  startOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(startOpen);
   const [state, action, pending] = useActionState<ActionState, FormData>(connectCredentials, {});
 
   if (!open) {
     return (
       <button className="btn-primary w-full" disabled={disabled} onClick={() => setOpen(true)}>
-        Connect
+        Connect {platform.name}
       </button>
     );
   }
   return (
-    <form action={action} className="space-y-3">
+    <form action={action} className="space-y-4">
       <input type="hidden" name="platform" value={platform.id} />
+      <input type="hidden" name="region" value={region} />
       {platform.fields?.map((f) => (
         <div key={f.name}>
           <label className="label" htmlFor={`${platform.id}-${f.name}`}>{f.label}</label>
@@ -32,11 +43,13 @@ export function CredentialConnect({ platform, disabled }: { platform: PlatformMe
           {f.help && <p className="hint mt-1.5">{f.help}</p>}
         </div>
       ))}
-      {state.error && <p className="text-sm text-red-700">{state.error}</p>}
-      {state.ok && <p className="text-sm text-green-700">{state.ok}</p>}
+      {state.error && <p role="alert" className="rounded-xl bg-brand-soft p-3 text-sm text-brand-dark">{state.error}</p>}
+      {state.ok && <p role="status" className="rounded-xl bg-green-50 p-3 text-sm text-green-800">{state.ok}</p>}
       <div className="flex gap-2">
-        <button className="btn-primary flex-1" disabled={pending}>{pending ? "Checking…" : "Connect"}</button>
-        <button type="button" className="btn-ghost" onClick={() => setOpen(false)}>Cancel</button>
+        <button className="btn-primary flex-1" disabled={pending}>{pending ? "Checking…" : `Connect ${platform.name}`}</button>
+        {!startOpen && (
+          <button type="button" className="btn-ghost" onClick={() => setOpen(false)}>Cancel</button>
+        )}
       </div>
     </form>
   );

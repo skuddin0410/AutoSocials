@@ -10,6 +10,8 @@ export type Credential = {
 };
 
 export type ConnectedAccount = {
+  /** Set when one login connects several platforms (Meta Business Suite → Facebook + Instagram). */
+  platform?: PlatformId;
   external_id: string;
   account_type?: string;
   handle?: string | null;
@@ -33,6 +35,7 @@ export type SocialAccountRow = {
   token_expires_at: string | null;
   settings: Record<string, unknown>;
   last_error: string | null;
+  region?: string;
 };
 
 export type MediaRow = {

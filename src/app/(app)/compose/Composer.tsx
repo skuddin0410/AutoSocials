@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { AccountAvatar, PlatformBadge } from "@/components/PlatformBadge";
 import { PLATFORM_BY_ID, textLength, type PlatformId } from "@/lib/platforms/registry";
 import { createClient } from "@/lib/supabase/client";
-import { createPost } from "./actions";
+import { aiWrite, createPost } from "./actions";
 
 type Account = {
   id: string;
@@ -14,6 +14,7 @@ type Account = {
   avatar_url: string | null;
   status: string;
   settings: Record<string, unknown>;
+  region?: string | null;
 };
 type Media = { id: string; public_url: string; kind: "image" | "video"; name: string };
 
@@ -22,21 +23,24 @@ export function Composer({
   workspaceId,
   timezone,
   defaultLocal,
+  initialMedia = [],
 }: {
   accounts: Account[];
   workspaceId: string;
   timezone: string;
   defaultLocal: string;
+  initialMedia?: Media[];
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<string[]>(accounts.filter((a) => a.status === "active").map((a) => a.id));
   const [text, setText] = useState("");
   const [link, setLink] = useState("");
   const [title, setTitle] = useState("");
-  const [media, setMedia] = useState<Media[]>([]);
+  const [media, setMedia] = useState<Media[]>(initialMedia);
   const [overrides, setOverrides] = useState<Partial<Record<PlatformId, string>>>({});
   const [tab, setTab] = useState<PlatformId | "all">("all");
-  const [mode, setMode] = useState<"now" | "schedule" | "draft">("schedule");
+  const [mode, setMode] = useState<"now" | "schedule" | "queue" | "draft">("queue");
+  const [aiBusy, setAiBusy] = useState(false);
   const [when, setWhen] = useState(defaultLocal);
   const [tiktokMode, setTiktokMode] = useState("direct");
   const [ytPrivacy, setYtPrivacy] = useState("public");
@@ -48,6 +52,7 @@ export function Composer({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const chosen = accounts.filter((a) => selected.includes(a.id));
+  const regions = Array.from(new Set(accounts.map((a) => a.region ?? "Canada")));
   const platforms = useMemo(() => Array.from(new Set(chosen.map((a) => a.platform))), [chosen]);
   const images = media.filter((m) => m.kind === "image").length;
   const videos = media.filter((m) => m.kind === "video").length;
@@ -105,7 +110,18 @@ export function Composer({
     }
   }
 
-  function submit(m: "now" | "schedule" | "draft") {
+  async function writeWithAi() {
+    setError(null);
+    setAiBusy(true);
+    const res = await aiWrite({ topic: "", text, link, platforms });
+    setAiBusy(false);
+    if (!res.ok) return setError(res.error);
+    if (res.base) setText(res.base);
+    setOverrides(res.perPlatform);
+    setDone(`AI wrote a version for ${Object.keys(res.perPlatform).length} platform${Object.keys(res.perPlatform).length === 1 ? "" : "s"}. Check each tab before publishing.`);
+  }
+
+  function submit(m: "now" | "schedule" | "queue" | "draft") {
     setError(null);
     setDone(null);
     start(async () => {
@@ -126,6 +142,8 @@ export function Composer({
           ? `Publishing to ${res.count} channel${res.count > 1 ? "s" : ""} now…`
           : m === "draft"
             ? "Saved as draft."
+            : m === "queue"
+            ? `Added to the queue for ${res.count} channel${res.count > 1 ? "s" : ""}. Next one goes out ${res.when ? new Date(res.when).toLocaleString("en-CA", { weekday: "short", hour: "numeric", minute: "2-digit" }) : "soon"}.`
             : `Scheduled for ${res.count} channel${res.count > 1 ? "s" : ""}.`,
       );
       setText("");
@@ -155,9 +173,19 @@ export function Composer({
       <div className="space-y-5">
         {/* Channels */}
         <section className="card p-6">
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-display text-lg font-semibold text-navy">Post to <span className="font-sans text-sm font-normal text-muted">({selected.length} of {accounts.length} selected)</span></h2>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              {regions.length > 1 &&
+                regions.map((r) => (
+                  <button
+                    key={r}
+                    className="btn-ghost btn-sm"
+                    onClick={() => setSelected(accounts.filter((a) => a.status === "active" && (a.region ?? "Canada") === r).map((a) => a.id))}
+                  >
+                    {r} only
+                  </button>
+                ))}
               <button className="btn-ghost btn-sm" onClick={() => setSelected(accounts.filter((a) => a.status === "active").map((a) => a.id))}>
                 Select all
               </button>
@@ -180,6 +208,7 @@ export function Composer({
                 >
                   <AccountAvatar platform={a.platform} name={a.display_name} avatar={a.avatar_url} size={34} />
                   <span className="max-w-[170px] truncate">{a.display_name}</span>
+                  {regions.length > 1 && <span className="text-xs text-muted">{a.region ?? "Canada"}</span>}
                   {on && <span className="text-brand" aria-hidden>✓</span>}
                 </button>
               );
@@ -225,6 +254,15 @@ export function Composer({
               <span>Editing here customizes {PLATFORM_BY_ID[tab].name} only.</span>
             )}
             <span>{textLength(editingText)} characters</span>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-harbour-soft px-4 py-3">
+            <button type="button" className="btn-blue" onClick={writeWithAi} disabled={aiBusy || !platforms.length}>
+              {aiBusy ? "Writing…" : "✦ Write with AI"}
+            </button>
+            <span className="text-sm text-harbour">
+              Type a rough idea or paste a link, pick channels, and AI writes a tailored version for each platform in CanadianSME&apos;s voice.
+            </span>
           </div>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -351,18 +389,21 @@ export function Composer({
 
         <section className="card space-y-5 p-6">
           <h2 className="font-display text-lg font-semibold text-navy">When should it go out?</h2>
-          <div className="grid grid-cols-3 gap-1 rounded-xl bg-paper p-1.5 ring-1 ring-line">
-            {(["now", "schedule", "draft"] as const).map((m) => (
+          <div className="grid grid-cols-4 gap-1 rounded-xl bg-paper p-1.5 ring-1 ring-line">
+            {(["queue", "schedule", "now", "draft"] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => setMode(m)}
                 aria-pressed={mode === m}
                 className={`min-h-10 rounded-lg font-display text-sm font-semibold ${mode === m ? "bg-navy text-white shadow-sm" : "text-muted hover:text-ink"}`}
               >
-                {m === "now" ? "Right now" : m === "schedule" ? "Later" : "Draft"}
+                {m === "now" ? "Now" : m === "schedule" ? "Pick time" : m === "queue" ? "Queue" : "Draft"}
               </button>
             ))}
           </div>
+          {mode === "queue" && (
+            <p className="hint">Each channel gets its next free posting time. Set those times on the Posting times page.</p>
+          )}
           {mode === "schedule" && (
             <div>
               <input type="datetime-local" className="input" value={when} onChange={(e) => setWhen(e.target.value)} />
@@ -376,7 +417,7 @@ export function Composer({
             disabled={pending || uploading || !selected.length || (hasIssues && mode !== "draft")}
             onClick={() => submit(mode)}
           >
-            {pending ? "Saving…" : mode === "now" ? `Publish to ${selected.length} channel${selected.length === 1 ? "" : "s"}` : mode === "schedule" ? `Schedule for ${selected.length} channel${selected.length === 1 ? "" : "s"}` : "Save draft"}
+            {pending ? "Saving…" : mode === "now" ? `Publish to ${selected.length} channel${selected.length === 1 ? "" : "s"}` : mode === "schedule" ? `Schedule for ${selected.length} channel${selected.length === 1 ? "" : "s"}` : mode === "queue" ? "Add to queue" : "Save draft"}
           </button>
         </section>
       </aside>
