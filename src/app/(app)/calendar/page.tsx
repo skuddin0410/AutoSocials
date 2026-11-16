@@ -31,7 +31,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
 
   const from = zonedLocalToUtcIso(`${month}-01T00:00`, tz);
   const to = zonedLocalToUtcIso(`${next}-01T00:00`, tz);
-  const { data } = await supabase
+  const monthQuery = supabase
     .from("post_variants")
     .select("id,post_id,status,scheduled_at,body,social_accounts(platform,display_name)")
     .eq("workspace_id", workspace.id)
@@ -44,7 +44,8 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const nowIso = new Date().toISOString();
   const in14 = new Date(Date.now() + 14 * 86400_000).toISOString();
   const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
-  const [{ data: upcomingRows }, scheduled7, published7, failed, approval] = await Promise.all([
+  const [{ data }, { data: upcomingRows }, scheduled7, published7, failed, approval] = await Promise.all([
+    monthQuery,
     supabase
       .from("post_variants")
       .select("id,post_id,status,scheduled_at,body,social_accounts(platform,display_name)")

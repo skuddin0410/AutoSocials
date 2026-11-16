@@ -14,7 +14,8 @@ export type ComposePayload = {
   overrides: Partial<Record<PlatformId, string>>;
   title: string;
   options: Record<string, unknown>; // { tiktok_mode, privacy_level, youtube_privacy, boards: {accountId: boardId} }
-  mode: "now" | "schedule" | "draft" | "queue";
+  mode: "now" | "schedule" | "draft" | "queue" | "library";
+  categoryId?: string | null;
   scheduledLocal?: string; // "YYYY-MM-DDTHH:mm" in brand timezone
 };
 
@@ -53,6 +54,27 @@ export async function createPost(p: ComposePayload): Promise<ComposeResult> {
   }
   if (problems.length) return { ok: false, error: Array.from(new Set(problems)).join(" · ") };
 
+  // Save to a category library: no channel posts yet; the timetable fills category slots from it.
+  if (p.mode === "library") {
+    if (!p.categoryId) return { ok: false, error: "Pick a category to save into." };
+    const { error } = await supabase.from("posts").insert({
+      workspace_id: workspace.id,
+      origin: "manual",
+      base_text: p.baseText,
+      link_url: p.link || null,
+      media_ids: p.mediaIds,
+      title: p.title || null,
+      created_by: user.id,
+      category_id: p.categoryId,
+      in_library: true,
+      overrides: p.overrides,
+      account_ids: p.accountIds,
+    });
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/content");
+    return { ok: true, count: p.accountIds.length, when: null };
+  }
+
   let scheduledAt: string | null = null;
   if (p.mode === "now") scheduledAt = new Date().toISOString();
   if (p.mode === "schedule") {
@@ -73,6 +95,7 @@ export async function createPost(p: ComposePayload): Promise<ComposeResult> {
       link_url: p.link || null,
       media_ids: p.mediaIds,
       created_by: user.id,
+      category_id: p.categoryId || null,
     })
     .select("id")
     .single();

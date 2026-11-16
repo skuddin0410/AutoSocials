@@ -22,7 +22,7 @@ function LoginForm() {
     if (mode === "signin") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setMsg({ tone: "error", text: error.message });
-      else router.replace(params.get("next") || "/calendar");
+      else router.replace(params.get("next") || "/dashboard");
     } else {
       const allowed = (process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS ?? "")
         .split(",")
@@ -39,7 +39,7 @@ function LoginForm() {
         options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
       });
       if (error) setMsg({ tone: "error", text: error.message });
-      else if (data.session) router.replace("/calendar");
+      else if (data.session) router.replace("/dashboard");
       else setMsg({ tone: "info", text: "Check your inbox and click the confirmation link, then sign in here." });
     }
     setBusy(false);

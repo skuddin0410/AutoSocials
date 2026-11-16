@@ -4,6 +4,10 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLIC = ["/login", "/auth", "/api/cron", "/privacy", "/terms"];
 
 export async function middleware(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+  // Public pages and OAuth callbacks don't need a session check.
+  if (PUBLIC.some((p) => path.startsWith(p))) return NextResponse.next({ request });
+
   let response = NextResponse.next({ request });
   const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
     cookies: {
@@ -15,12 +19,9 @@ export async function middleware(request: NextRequest) {
       },
     },
   });
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const path = request.nextUrl.pathname;
-  if (!user && !PUBLIC.some((p) => path.startsWith(p))) {
+  // getClaims verifies the session JWT locally (ES256 keys, cached JWKS): no auth-server round trip per click.
+  const { data } = await supabase.auth.getClaims();
+  if (!data?.claims?.sub) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", path);
@@ -30,5 +31,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
 };

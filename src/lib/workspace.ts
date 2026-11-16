@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "./supabase/server";
@@ -8,17 +9,19 @@ export type Workspace = { id: string; name: string; slug: string; timezone: stri
 export type Role = "owner" | "admin" | "editor" | "viewer";
 
 /** Signed-in user + current brand (workspace). Redirects to /login or /onboarding when missing. */
-export async function getContext() {
+/** Deduplicated per request (layout + page + actions share one lookup). */
+export const getContext = cache(async () => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  // Local JWT verification (no network hop); the middleware already rejected bad sessions.
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (!claims?.sub) redirect("/login");
+  const user = { id: claims.sub as string, email: (claims.email as string | undefined) ?? null };
 
-  const { data: memberships } = await supabase
-    .from("workspace_members")
-    .select("role, workspaces(id,name,slug,timezone,require_approval,brand_voice)")
-    .eq("user_id", user.id);
+  const [{ data: memberships }, cookieStore] = await Promise.all([
+    supabase.from("workspace_members").select("role, workspaces(id,name,slug,timezone,require_approval,brand_voice)").eq("user_id", user.id),
+    cookies(),
+  ]);
 
   const list = (memberships ?? [])
     .filter((m: any) => m.workspaces)
@@ -27,10 +30,10 @@ export async function getContext() {
 
   if (!list.length) redirect("/onboarding");
 
-  const wanted = (await cookies()).get(WS_COOKIE)?.value;
+  const wanted = cookieStore.get(WS_COOKIE)?.value;
   const current = list.find((m) => m.workspace.id === wanted) ?? list[0];
   return { supabase, user, workspace: current.workspace, role: current.role, workspaces: list };
-}
+});
 
 export function canEdit(role: Role) {
   return role !== "viewer";
