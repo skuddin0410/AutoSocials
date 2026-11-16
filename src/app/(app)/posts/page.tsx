@@ -23,7 +23,7 @@ const FILTERS = [
   { key: "upcoming", label: "Upcoming" },
   { key: "pending_approval", label: "Needs approval" },
   { key: "failed", label: "Failed" },
-  { key: "published", label: "Published" },
+  { key: "published", label: "Sent" },
   { key: "draft", label: "Drafts" },
   { key: "all", label: "All" },
 ];
@@ -54,7 +54,7 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
     <div className="mx-auto max-w-5xl">
       <header className="masthead">
         <div>
-          <h1>All posts</h1>
+          <h1>Queue</h1>
           <p>See what went out, what's coming up and what needs a second try.</p>
         </div>
         <Link href="/compose" className="btn-primary">Create post</Link>

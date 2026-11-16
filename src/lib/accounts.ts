@@ -9,6 +9,7 @@ export async function saveConnectedAccounts(
   userId: string,
   platform: PlatformId,
   accounts: ConnectedAccount[],
+  region?: string | null,
 ): Promise<number> {
   const admin = createAdminClient();
   for (const a of accounts) {
@@ -17,8 +18,9 @@ export async function saveConnectedAccounts(
       .upsert(
         {
           workspace_id: workspaceId,
-          platform,
+          platform: a.platform ?? platform,
           external_id: a.external_id,
+          ...(region ? { region } : {}),
           account_type: a.account_type ?? null,
           handle: a.handle ?? null,
           display_name: a.display_name ?? null,

@@ -14,6 +14,7 @@ type Account = {
   avatar_url: string | null;
   status: string;
   settings: Record<string, unknown>;
+  region?: string | null;
 };
 type Media = { id: string; public_url: string; kind: "image" | "video"; name: string };
 
@@ -22,18 +23,20 @@ export function Composer({
   workspaceId,
   timezone,
   defaultLocal,
+  initialMedia = [],
 }: {
   accounts: Account[];
   workspaceId: string;
   timezone: string;
   defaultLocal: string;
+  initialMedia?: Media[];
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<string[]>(accounts.filter((a) => a.status === "active").map((a) => a.id));
   const [text, setText] = useState("");
   const [link, setLink] = useState("");
   const [title, setTitle] = useState("");
-  const [media, setMedia] = useState<Media[]>([]);
+  const [media, setMedia] = useState<Media[]>(initialMedia);
   const [overrides, setOverrides] = useState<Partial<Record<PlatformId, string>>>({});
   const [tab, setTab] = useState<PlatformId | "all">("all");
   const [mode, setMode] = useState<"now" | "schedule" | "draft">("schedule");
@@ -48,6 +51,7 @@ export function Composer({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const chosen = accounts.filter((a) => selected.includes(a.id));
+  const regions = Array.from(new Set(accounts.map((a) => a.region ?? "Canada")));
   const platforms = useMemo(() => Array.from(new Set(chosen.map((a) => a.platform))), [chosen]);
   const images = media.filter((m) => m.kind === "image").length;
   const videos = media.filter((m) => m.kind === "video").length;
@@ -155,9 +159,19 @@ export function Composer({
       <div className="space-y-5">
         {/* Channels */}
         <section className="card p-6">
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-display text-lg font-semibold text-navy">Post to <span className="font-sans text-sm font-normal text-muted">({selected.length} of {accounts.length} selected)</span></h2>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              {regions.length > 1 &&
+                regions.map((r) => (
+                  <button
+                    key={r}
+                    className="btn-ghost btn-sm"
+                    onClick={() => setSelected(accounts.filter((a) => a.status === "active" && (a.region ?? "Canada") === r).map((a) => a.id))}
+                  >
+                    {r} only
+                  </button>
+                ))}
               <button className="btn-ghost btn-sm" onClick={() => setSelected(accounts.filter((a) => a.status === "active").map((a) => a.id))}>
                 Select all
               </button>
@@ -180,6 +194,7 @@ export function Composer({
                 >
                   <AccountAvatar platform={a.platform} name={a.display_name} avatar={a.avatar_url} size={34} />
                   <span className="max-w-[170px] truncate">{a.display_name}</span>
+                  {regions.length > 1 && <span className="text-xs text-muted">{a.region ?? "Canada"}</span>}
                   {on && <span className="text-brand" aria-hidden>✓</span>}
                 </button>
               );

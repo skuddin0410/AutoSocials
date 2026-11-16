@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { saveConnectedAccounts } from "@/lib/accounts";
 import { verifyCredentials } from "@/lib/platforms/credentials";
-import { isPlatformId, PLATFORM_BY_ID } from "@/lib/platforms/registry";
+import { isPlatformId, PLATFORM_BY_ID, REGIONS } from "@/lib/platforms/registry";
 import { getContext, isAdmin } from "@/lib/workspace";
 
 export type ActionState = { ok?: string; error?: string };
@@ -17,7 +17,8 @@ export async function connectCredentials(_prev: ActionState, formData: FormData)
   for (const f of PLATFORM_BY_ID[platform].fields ?? []) fields[f.name] = String(formData.get(f.name) ?? "");
   try {
     const account = await verifyCredentials(platform, fields);
-    await saveConnectedAccounts(workspace.id, user.id, platform, [account]);
+    const region = String(formData.get("region") ?? "");
+    await saveConnectedAccounts(workspace.id, user.id, platform, [account], REGIONS.includes(region as (typeof REGIONS)[number]) ? region : null);
   } catch (e) {
     return { error: `Couldn't connect: ${(e as Error).message}` };
   }
@@ -41,4 +42,15 @@ export async function setDefaultBoard(formData: FormData) {
   const { data } = await supabase.from("social_accounts").select("settings").eq("id", id).single();
   await supabase.from("social_accounts").update({ settings: { ...(data?.settings ?? {}), default_board_id: board } }).eq("id", id);
   revalidatePath("/channels");
+}
+
+export async function setRegion(formData: FormData) {
+  const id = String(formData.get("id"));
+  const region = String(formData.get("region"));
+  if (!REGIONS.includes(region as (typeof REGIONS)[number])) throw new Error("Unknown region");
+  const { supabase, role } = await getContext();
+  if (!isAdmin(role)) throw new Error("Only brand admins can change channels.");
+  await supabase.from("social_accounts").update({ region }).eq("id", id);
+  revalidatePath("/channels");
+  revalidatePath("/compose");
 }

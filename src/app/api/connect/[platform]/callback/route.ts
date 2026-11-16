@@ -33,10 +33,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (Date.now() - new Date(row.created_at).getTime() > 15 * 60_000) return fail("Connection timed out. Please try again.");
 
   try {
-    const accounts = await handleCallback(platform, code, row.code_verifier ?? "");
+    const accounts = await handleCallback(platform, code, row.code_verifier ?? "", row.variant);
     if (!accounts.length) return fail(`No ${PLATFORM_BY_ID[platform].name} accounts were found on that login.`);
-    const n = await saveConnectedAccounts(row.workspace_id, user.id, platform, accounts);
-    return to(`connected=${platform}&count=${n}`);
+    const n = await saveConnectedAccounts(row.workspace_id, user.id, platform, accounts, row.region);
+    return to(`connected=${row.variant === "meta" ? "Meta" : PLATFORM_BY_ID[platform].name}&count=${n}`);
   } catch (e) {
     return fail(`${PLATFORM_BY_ID[platform].name}: ${(e as Error).message}`);
   }
