@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BrandLogo, ProductTag } from "@/components/Brand";
 import { BrandSwitcher } from "@/components/BrandSwitcher";
-import { IconCalendar, IconClock, IconImage, IconLink, IconList, IconLogout, IconPlus, IconRss, IconSettings } from "@/components/Icons";
+import { IconCalendar, IconClock, IconFolder, IconHome, IconImage, IconLink, IconList, IconLogout, IconPlus, IconRss, IconSettings } from "@/components/Icons";
 import { NavLink } from "@/components/NavLink";
 import { getContext } from "@/lib/workspace";
 import { signOut } from "./actions";
@@ -10,8 +10,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { user, workspace, workspaces } = await getContext();
   return (
     <div className="flex min-h-screen">
-      <aside className="sticky top-0 flex h-screen w-[272px] shrink-0 flex-col bg-navy px-4 py-6">
-        <Link href="/calendar" className="mb-7 block px-2" aria-label="AutoSocials home">
+      <aside className="sticky top-0 flex h-screen w-[272px] shrink-0 flex-col overflow-y-auto bg-navy px-4 py-6">
+        <Link href="/dashboard" className="mb-6 block px-2" aria-label="AutoSocials home">
           <BrandLogo light className="h-8" />
           <div className="mt-2">
             <ProductTag dark />
@@ -24,12 +24,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <IconPlus /> Create post
         </Link>
 
-        <nav className="mt-6 space-y-1" aria-label="Main">
+        <nav className="mt-6 space-y-0.5" aria-label="Main">
+          <NavLink href="/dashboard" icon={<IconHome />}>Dashboard</NavLink>
+          <NavLink href="/content" icon={<IconFolder />}>Content library</NavLink>
+          <NavLink href="/times" icon={<IconClock />}>Scheduler</NavLink>
           <NavLink href="/calendar" icon={<IconCalendar />}>Calendar</NavLink>
           <NavLink href="/posts" icon={<IconList />}>Queue</NavLink>
           <NavLink href="/media" icon={<IconImage />}>Media library</NavLink>
           <NavLink href="/sources" icon={<IconRss />}>Auto-post</NavLink>
-          <NavLink href="/times" icon={<IconClock />}>Posting times</NavLink>
           <NavLink href="/channels" icon={<IconLink />}>Channels</NavLink>
           <NavLink href="/settings" icon={<IconSettings />}>Settings</NavLink>
         </nav>

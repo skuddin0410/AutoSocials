@@ -9,8 +9,11 @@ const fmt = (t: string) => {
   return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "a.m." : "p.m."}`;
 };
 
-export default async function TimesPage() {
+export default async function TimesPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
+  const sp = await searchParams;
   const { supabase, workspace, role } = await getContext();
+  const { data: cats } = await supabase.from("content_categories").select("id,name,color").eq("workspace_id", workspace.id).order("sort");
+  const catById = new Map((cats ?? []).map((c) => [c.id, c]));
   const editor = canEdit(role);
   const { data: accounts } = await supabase
     .from("social_accounts")
@@ -19,15 +22,15 @@ export default async function TimesPage() {
     .order("platform");
   const ids = (accounts ?? []).map((a) => a.id);
   const { data: slots } = ids.length
-    ? await supabase.from("posting_slots").select("id,account_id,day_of_week,local_time").in("account_id", ids).order("local_time")
-    : { data: [] as { id: string; account_id: string; day_of_week: number; local_time: string }[] };
+    ? await supabase.from("posting_slots").select("id,account_id,day_of_week,local_time,category_id").in("account_id", ids).order("local_time")
+    : { data: [] as { id: string; account_id: string; day_of_week: number; local_time: string; category_id: string | null }[] };
 
   return (
     <div className="mx-auto max-w-6xl">
       <header className="masthead">
         <div>
-          <h1>Posting times</h1>
-          <p>When &quot;Queue&quot; is chosen, each post takes the channel&apos;s next free time. Times are in {workspace.timezone.replace("_", " ")}.</p>
+          <h1>Scheduler</h1>
+          <p>Your weekly posting timetable. General times take posts you queue; category times are filled automatically from that category&apos;s library. Times in {workspace.timezone.replace("_", " ")}.</p>
         </div>
         {editor && (accounts ?? []).length > 0 && (
           <form action={applyRecommended}>
@@ -71,6 +74,15 @@ export default async function TimesPage() {
                   </div>
                 </div>
                 <div>
+                  <label className="label" htmlFor="category">For</label>
+                  <select id="category" name="category" defaultValue={sp.category ?? ""} className="input w-56">
+                    <option value="">General queue</option>
+                    {(cats ?? []).map((c) => (
+                      <option key={c.id} value={c.id}>Category: {c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <label className="label" htmlFor="time">Time</label>
                   <input id="time" name="time" type="time" defaultValue="09:30" required className="input w-36" />
                 </div>
@@ -79,6 +91,13 @@ export default async function TimesPage() {
             </form>
           )}
 
+          <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
+            <span className="font-semibold text-ink">Key:</span>
+            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded" style={{ background: "#101828" }} />General queue</span>
+            {(cats ?? []).map((c) => (
+              <span key={c.id} className="flex items-center gap-1.5"><span className="h-3 w-3 rounded" style={{ background: c.color }} />{c.name}</span>
+            ))}
+          </div>
           <div className="grid gap-4 lg:grid-cols-2">
             {(accounts ?? []).map((a) => {
               const mine = (slots ?? []).filter((s) => s.account_id === a.id);
@@ -109,9 +128,15 @@ export default async function TimesPage() {
                               {day.map((s) => (
                                 <form key={s.id} action={removeSlot}>
                                   <input type="hidden" name="id" value={s.id} />
-                                  <button className="group flex min-h-8 items-center gap-1.5 rounded-lg bg-harbour-soft px-2.5 text-sm font-medium text-harbour hover:bg-brand-soft hover:text-brand" title="Remove this time" disabled={!editor}>
+                                  <button
+                                    className="group flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-white hover:opacity-80"
+                                    style={{ background: s.category_id ? catById.get(s.category_id)?.color ?? "#475569" : "#101828" }}
+                                    title={`${s.category_id ? catById.get(s.category_id)?.name : "General queue"}: click to remove`}
+                                    disabled={!editor}
+                                  >
                                     {fmt(s.local_time.slice(0, 5))}
-                                    {editor && <span className="opacity-50 group-hover:opacity-100">✕</span>}
+                                    {s.category_id && <span className="text-[11px] opacity-90">{catById.get(s.category_id)?.name}</span>}
+                                    {editor && <span className="opacity-70 group-hover:opacity-100">✕</span>}
                                   </button>
                                 </form>
                               ))}

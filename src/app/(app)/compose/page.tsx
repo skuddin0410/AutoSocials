@@ -2,9 +2,11 @@ import { nowLocalInput } from "@/lib/time";
 import { getContext } from "@/lib/workspace";
 import { Composer } from "./Composer";
 
-export default async function ComposePage({ searchParams }: { searchParams: Promise<{ media?: string }> }) {
+export default async function ComposePage({ searchParams }: { searchParams: Promise<{ media?: string; category?: string }> }) {
   const { supabase, workspace } = await getContext();
-  const mediaIds = ((await searchParams).media ?? "").split(",").filter(Boolean).slice(0, 10);
+  const sp = await searchParams;
+  const mediaIds = (sp.media ?? "").split(",").filter(Boolean).slice(0, 10);
+  const { data: categories } = await supabase.from("content_categories").select("id,name,color").eq("workspace_id", workspace.id).order("sort");
   const { data: initialMedia } = mediaIds.length
     ? await supabase.from("media_assets").select("id,public_url,kind,storage_path").in("id", mediaIds)
     : { data: [] as any[] };
@@ -27,6 +29,8 @@ export default async function ComposePage({ searchParams }: { searchParams: Prom
         workspaceId={workspace.id}
         timezone={workspace.timezone}
         defaultLocal={nowLocalInput(workspace.timezone, 60)}
+        categories={categories ?? []}
+        initialCategory={sp.category ?? ""}
         initialMedia={(initialMedia ?? []).map((m: any) => ({ id: m.id, public_url: m.public_url, kind: m.kind, name: m.storage_path }))}
       />
     </div>

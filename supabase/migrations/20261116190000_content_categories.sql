@@ -79,3 +79,26 @@ begin
 end $$;
 revoke execute on function public.create_workspace(text, text) from anon, public;
 grant execute on function public.create_workspace(text, text) to authenticated;
+
+create or replace function public.category_slot_occurrences(p_days int default 7)
+returns table (slot_id uuid, account_id uuid, platform public.social_platform, workspace_id uuid, category_id uuid, ts timestamptz)
+language sql stable security definer set search_path = '' as $$
+  select s.id, s.account_id, a.platform, a.workspace_id, s.category_id, o.ts
+  from public.posting_slots s
+  join public.social_accounts a on a.id = s.account_id and a.status = 'active'
+  join public.workspaces w on w.id = a.workspace_id
+  cross join lateral (
+    select ((d::date + s.local_time) at time zone w.timezone) as ts
+    from generate_series((now() at time zone w.timezone)::date, (now() at time zone w.timezone)::date + p_days, interval '1 day') d
+    where extract(dow from d)::int = s.day_of_week
+  ) o
+  where s.active and s.category_id is not null
+    and o.ts > now() + interval '2 minutes'
+    and o.ts < now() + make_interval(days => p_days)
+    and not exists (
+      select 1 from public.post_variants v
+      where v.account_id = s.account_id and v.scheduled_at = o.ts
+        and v.status in ('scheduled','publishing','published','pending_approval'))
+  order by o.ts;
+$$;
+revoke execute on function public.category_slot_occurrences(int) from anon, authenticated, public;

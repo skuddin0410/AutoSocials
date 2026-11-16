@@ -24,7 +24,11 @@ export function Composer({
   timezone,
   defaultLocal,
   initialMedia = [],
+  categories = [],
+  initialCategory = "",
 }: {
+  categories?: { id: string; name: string; color: string }[];
+  initialCategory?: string;
   accounts: Account[];
   workspaceId: string;
   timezone: string;
@@ -39,7 +43,8 @@ export function Composer({
   const [media, setMedia] = useState<Media[]>(initialMedia);
   const [overrides, setOverrides] = useState<Partial<Record<PlatformId, string>>>({});
   const [tab, setTab] = useState<PlatformId | "all">("all");
-  const [mode, setMode] = useState<"now" | "schedule" | "queue" | "draft">("queue");
+  const [mode, setMode] = useState<"now" | "schedule" | "queue" | "draft" | "library">(initialCategory ? "library" : "queue");
+  const [categoryId, setCategoryId] = useState(initialCategory);
   const [aiBusy, setAiBusy] = useState(false);
   const [when, setWhen] = useState(defaultLocal);
   const [tiktokMode, setTiktokMode] = useState("direct");
@@ -121,7 +126,7 @@ export function Composer({
     setDone(`AI wrote a version for ${Object.keys(res.perPlatform).length} platform${Object.keys(res.perPlatform).length === 1 ? "" : "s"}. Check each tab before publishing.`);
   }
 
-  function submit(m: "now" | "schedule" | "queue" | "draft") {
+  function submit(m: "now" | "schedule" | "queue" | "draft" | "library") {
     setError(null);
     setDone(null);
     start(async () => {
@@ -134,13 +139,16 @@ export function Composer({
         overrides,
         options: { tiktok_mode: tiktokMode, youtube_privacy: ytPrivacy, boards },
         mode: m,
+        categoryId: categoryId || null,
         scheduledLocal: when,
       });
       if (!res.ok) return setError(res.error);
       setDone(
         m === "now"
           ? `Publishing to ${res.count} channel${res.count > 1 ? "s" : ""} now…`
-          : m === "draft"
+          : m === "library"
+            ? `Saved to ${categories.find((c) => c.id === categoryId)?.name ?? "the library"}. It goes out in that category's posting times.`
+            : m === "draft"
             ? "Saved as draft."
             : m === "queue"
             ? `Added to the queue for ${res.count} channel${res.count > 1 ? "s" : ""}. Next one goes out ${res.when ? new Date(res.when).toLocaleString("en-CA", { weekday: "short", hour: "numeric", minute: "2-digit" }) : "soon"}.`
@@ -389,6 +397,26 @@ export function Composer({
 
         <section className="card space-y-5 p-6">
           <h2 className="font-display text-lg font-semibold text-navy">When should it go out?</h2>
+          {categories.length > 0 && (
+            <div>
+              <label className="label" htmlFor="category">Category</label>
+              <select id="category" className="input" value={categoryId} onChange={(e) => { setCategoryId(e.target.value); if (!e.target.value && mode === "library") setMode("queue"); }}>
+                <option value="">No category</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {categoryId && (
+            <label className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-3.5 ${mode === "library" ? "border-navy bg-paper" : "border-line"}`}>
+              <input type="radio" name="mode" checked={mode === "library"} onChange={() => setMode("library")} className="mt-1 accent-[#101828]" />
+              <span>
+                <span className="block font-semibold">Save to the category library</span>
+                <span className="hint">Goes out automatically in the category&apos;s posting times{" "}(and re-shares if it&apos;s evergreen).</span>
+              </span>
+            </label>
+          )}
           <div className="grid grid-cols-4 gap-1 rounded-xl bg-paper p-1.5 ring-1 ring-line">
             {(["queue", "schedule", "now", "draft"] as const).map((m) => (
               <button
@@ -417,7 +445,7 @@ export function Composer({
             disabled={pending || uploading || !selected.length || (hasIssues && mode !== "draft")}
             onClick={() => submit(mode)}
           >
-            {pending ? "Saving…" : mode === "now" ? `Publish to ${selected.length} channel${selected.length === 1 ? "" : "s"}` : mode === "schedule" ? `Schedule for ${selected.length} channel${selected.length === 1 ? "" : "s"}` : mode === "queue" ? "Add to queue" : "Save draft"}
+            {pending ? "Saving…" : mode === "now" ? `Publish to ${selected.length} channel${selected.length === 1 ? "" : "s"}` : mode === "schedule" ? `Schedule for ${selected.length} channel${selected.length === 1 ? "" : "s"}` : mode === "queue" ? "Add to queue" : mode === "library" ? "Save to library" : "Save draft"}
           </button>
         </section>
       </aside>

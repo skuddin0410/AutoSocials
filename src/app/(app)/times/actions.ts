@@ -19,15 +19,31 @@ async function editor() {
   return ctx;
 }
 
+type SlotRow = { account_id: string; day_of_week: number; local_time: string; category_id: string | null };
+
+/** Insert slots, skipping ones that already exist (same channel, day, time and category). */
+async function insertNew(supabase: Awaited<ReturnType<typeof getContext>>["supabase"], rows: SlotRow[]) {
+  if (!rows.length) return;
+  const { data: existing } = await supabase
+    .from("posting_slots")
+    .select("account_id,day_of_week,local_time,category_id")
+    .in("account_id", Array.from(new Set(rows.map((r) => r.account_id))));
+  const key = (r: SlotRow) => `${r.account_id}|${r.day_of_week}|${r.local_time.slice(0, 5)}|${r.category_id ?? ""}`;
+  const have = new Set((existing ?? []).map((r) => key(r as SlotRow)));
+  const fresh = rows.filter((r) => !have.has(key(r)));
+  if (fresh.length) await supabase.from("posting_slots").insert(fresh);
+}
+
 export async function addSlots(formData: FormData) {
   const { supabase } = await editor();
   const time = String(formData.get("time") || "");
   if (!/^\d{2}:\d{2}$/.test(time)) return;
   const days = formData.getAll("day").map(Number).filter((d) => d >= 0 && d <= 6);
   const accounts = formData.getAll("account").map(String);
-  const rows = accounts.flatMap((account_id) => days.map((day_of_week) => ({ account_id, day_of_week, local_time: time })));
-  if (rows.length) await supabase.from("posting_slots").upsert(rows, { onConflict: "account_id,day_of_week,local_time", ignoreDuplicates: true });
+  const category_id = String(formData.get("category") || "") || null;
+  await insertNew(supabase, accounts.flatMap((account_id) => days.map((day_of_week) => ({ account_id, day_of_week, local_time: time, category_id }))));
   revalidatePath("/times");
+  revalidatePath("/content");
 }
 
 export async function removeSlot(formData: FormData) {
@@ -47,8 +63,8 @@ export async function applyRecommended() {
   const { data: accounts } = await supabase.from("social_accounts").select("id,platform").eq("workspace_id", workspace.id);
   const rows = (accounts ?? []).flatMap((a) => {
     const r = RECOMMENDED[a.platform] ?? RECOMMENDED.default;
-    return r.days.flatMap((d) => r.times.map((t) => ({ account_id: a.id, day_of_week: d, local_time: t })));
+    return r.days.flatMap((d) => r.times.map((t) => ({ account_id: a.id, day_of_week: d, local_time: t, category_id: null })));
   });
-  if (rows.length) await supabase.from("posting_slots").upsert(rows, { onConflict: "account_id,day_of_week,local_time", ignoreDuplicates: true });
+  await insertNew(supabase, rows);
   revalidatePath("/times");
 }
