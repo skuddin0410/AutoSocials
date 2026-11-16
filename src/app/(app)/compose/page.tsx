@@ -12,9 +12,11 @@ export default async function ComposePage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold">Create post</h1>
-        <p className="text-sm text-muted">Write once, publish to every {workspace.name} channel.</p>
+      <header className="masthead">
+        <div>
+          <h1>Create post</h1>
+          <p>Write it once. Pick the channels. Publish now or schedule it for later.</p>
+        </div>
       </header>
       <Composer
         accounts={(data ?? []) as any}

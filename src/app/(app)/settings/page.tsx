@@ -22,14 +22,16 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
-      <header>
-        <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="text-sm text-muted">{workspace.name}</p>
+      <header className="masthead !mb-0">
+        <div>
+          <h1>Settings</h1>
+          <p>Brand details, team access and more brands for {workspace.name}.</p>
+        </div>
       </header>
       {sp.error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{sp.error}</div>}
 
-      <section className="card p-6">
-        <h2 className="mb-4 font-medium">Brand</h2>
+      <section className="card p-7">
+        <h2 className="mb-5 text-xl font-bold text-navy">Brand</h2>
         <form action={updateBrand} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -53,8 +55,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </form>
       </section>
 
-      <section className="card p-6">
-        <h2 className="mb-4 font-medium">Team</h2>
+      <section className="card p-7">
+        <h2 className="mb-5 text-xl font-bold text-navy">Team</h2>
         <ul className="mb-4 divide-y divide-line">
           {(members ?? []).map((m) => (
             <li key={m.user_id} className="flex items-center gap-3 py-2 text-sm">
@@ -83,8 +85,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <p className="mt-2 text-xs text-muted">Teammates sign up on the login page first, then you add them here.</p>
       </section>
 
-      <section className="card p-6">
-        <h2 className="mb-1 font-medium">Add another brand</h2>
+      <section className="card p-7">
+        <h2 className="mb-1 text-xl font-bold text-navy">Add another brand</h2>
         <p className="mb-4 text-sm text-muted">Each website gets its own channels, calendar and team. Switch brands from the sidebar.</p>
         <form action={createBrand} className="flex gap-2">
           <input name="name" required placeholder="e.g. She & Success" className="input flex-1" />

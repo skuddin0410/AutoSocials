@@ -19,11 +19,13 @@ export default async function ChannelsPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="mx-auto max-w-6xl">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold">Channels</h1>
-        <p className="text-sm text-muted">
-          Connect {workspace.name}&apos;s social accounts. Every connected channel shows up in the post composer.
+      <header className="masthead">
+        <div>
+        <h1>Channels</h1>
+        <p>
+          Connect {workspace.name}&apos;s social accounts. Every connected channel shows up when you create a post.
         </p>
+        </div>
       </header>
 
       {sp.connected && (
@@ -35,17 +37,17 @@ export default async function ChannelsPage({ searchParams }: { searchParams: Pro
 
       {accounts.length > 0 && (
         <section className="card mb-8 divide-y divide-line">
-          <div className="px-5 py-3 text-sm font-medium">Connected ({accounts.length})</div>
+          <div className="px-5 py-4 font-display text-lg font-semibold text-navy">Connected channels ({accounts.length})</div>
           {accounts.map((a) => {
             const boards = (a.settings.boards as { id: string; name: string }[] | undefined) ?? [];
             const expires = a.token_expires_at ? new Date(a.token_expires_at) : null;
             const soon = expires && expires.getTime() - Date.now() < 7 * 86400_000 && !["x", "tiktok", "youtube", "gbp", "pinterest"].includes(a.platform);
             return (
-              <div key={a.id} className="flex flex-wrap items-center gap-4 px-5 py-3">
-                <AccountAvatar platform={a.platform} name={a.display_name} avatar={a.avatar_url} />
+              <div key={a.id} className="flex flex-wrap items-center gap-4 px-5 py-4">
+                <AccountAvatar platform={a.platform} name={a.display_name} avatar={a.avatar_url} size={44} />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{a.display_name}</div>
-                  <div className="truncate text-xs text-muted">
+                  <div className="truncate font-display font-semibold text-navy">{a.display_name}</div>
+                  <div className="truncate text-sm text-muted">
                     {a.handle ?? a.external_id} · {a.account_type}
                   </div>
                 </div>
@@ -57,7 +59,7 @@ export default async function ChannelsPage({ searchParams }: { searchParams: Pro
                         <option key={b.id} value={b.id}>{b.name}</option>
                       ))}
                     </select>
-                    <button className="btn-ghost py-1.5">Save board</button>
+                    <button className="btn-ghost btn-sm">Save board</button>
                   </form>
                 )}
                 {a.status === "reconnect_needed" ? (
@@ -74,7 +76,7 @@ export default async function ChannelsPage({ searchParams }: { searchParams: Pro
                 {admin && (
                   <form action={disconnectAccount}>
                     <input type="hidden" name="id" value={a.id} />
-                    <button className="btn-danger py-1.5">Remove</button>
+                    <button className="btn-danger btn-sm">Remove</button>
                   </form>
                 )}
               </div>
@@ -83,31 +85,31 @@ export default async function ChannelsPage({ searchParams }: { searchParams: Pro
         </section>
       )}
 
-      <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-muted">Add a channel</h2>
+      <h2 className="mb-4 text-xl font-bold text-navy">Add a channel</h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {PLATFORMS.map((p) => {
           const missing = (p.env ?? []).filter((e) => !process.env[e]);
           const count = byPlatform(p.id).length;
           return (
-            <div key={p.id} className="card flex flex-col p-5">
-              <div className="mb-3 flex items-center gap-3">
-                <PlatformBadge platform={p.id} size={32} />
+            <div key={p.id} className="card flex flex-col p-6">
+              <div className="mb-4 flex items-center gap-3.5">
+                <PlatformBadge platform={p.id} size={44} />
                 <div>
-                  <div className="font-medium">{p.name}</div>
-                  <div className="text-xs text-muted">{count ? `${count} connected` : p.connectsAs}</div>
+                  <div className="font-display text-base font-semibold text-navy">{p.name}</div>
+                  <div className={`text-sm ${count ? "font-semibold text-green-700" : "text-muted"}`}>{count ? `${count} connected` : p.connectsAs}</div>
                 </div>
               </div>
-              {p.note && <p className="mb-4 text-xs leading-relaxed text-muted">{p.note}</p>}
+              {p.note && <p className="mb-5 text-sm leading-relaxed text-muted">{p.note}</p>}
               <div className="mt-auto">
                 {!admin ? (
                   <p className="text-xs text-muted">Ask a brand admin to connect channels.</p>
                 ) : missing.length ? (
-                  <div className="rounded-lg bg-stone-50 p-3 text-xs text-muted">
+                  <div className="rounded-xl bg-paper p-3.5 text-sm text-muted">
                     <span className="font-medium text-ink">Setup needed:</span> add {missing.join(", ")} to the app&apos;s environment.{" "}
                     <a href={p.docs} target="_blank" className="underline">Docs</a>
                   </div>
                 ) : p.auth === "oauth" ? (
-                  <a href={`/api/connect/${p.id}`} className="btn-ghost w-full">
+                  <a href={`/api/connect/${p.id}`} className={`${count ? "btn-ghost" : "btn-primary"} w-full`}>
                     {count ? "Connect another / reconnect" : `Connect ${p.name}`}
                   </a>
                 ) : (
